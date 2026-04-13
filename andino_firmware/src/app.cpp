@@ -83,6 +83,9 @@
 #if defined(ARDUINO_ARCH_ESP32)
 #include "interrupt_in_esp32.h"
 #include "pwm_out_esp32_mcpwm.h"
+#elif defined(ARDUINO_ARCH_RP2040)
+#include "interrupt_in_rp2040.h"
+#include "pwm_out_rp2040.h"
 #else
 #include "interrupt_in_arduino.h"
 #include "pwm_out_arduino.h"
@@ -100,6 +103,9 @@ PwmOutEsp32Mcpwm App::left_motor_forward_pwm_out_(Hw::kLeftMotorForwardGpioPin, 
                                                   MCPWM0A);
 PwmOutEsp32Mcpwm App::left_motor_backward_pwm_out_(Hw::kLeftMotorBackwardGpioPin, MCPWM_UNIT_0,
                                                    MCPWM0B);
+#elif defined(ARDUINO_ARCH_RP2040)
+PwmOutRp2040 App::left_motor_forward_pwm_out_(Hw::kLeftMotorForwardGpioPin);
+PwmOutRp2040 App::left_motor_backward_pwm_out_(Hw::kLeftMotorBackwardGpioPin);
 #else
 PwmOutArduino App::left_motor_forward_pwm_out_(Hw::kLeftMotorForwardGpioPin);
 PwmOutArduino App::left_motor_backward_pwm_out_(Hw::kLeftMotorBackwardGpioPin);
@@ -113,6 +119,9 @@ PwmOutEsp32Mcpwm App::right_motor_forward_pwm_out_(Hw::kRightMotorForwardGpioPin
                                                    MCPWM1A);
 PwmOutEsp32Mcpwm App::right_motor_backward_pwm_out_(Hw::kRightMotorBackwardGpioPin, MCPWM_UNIT_1,
                                                     MCPWM1B);
+#elif defined(ARDUINO_ARCH_RP2040)
+PwmOutRp2040 App::right_motor_forward_pwm_out_(Hw::kRightMotorForwardGpioPin);
+PwmOutRp2040 App::right_motor_backward_pwm_out_(Hw::kRightMotorBackwardGpioPin);
 #else
 PwmOutArduino App::right_motor_forward_pwm_out_(Hw::kRightMotorForwardGpioPin);
 PwmOutArduino App::right_motor_backward_pwm_out_(Hw::kRightMotorBackwardGpioPin);
@@ -123,6 +132,9 @@ Motor App::right_motor_(&right_motor_enable_digital_out_, &right_motor_forward_p
 #if defined(ARDUINO_ARCH_ESP32)
 InterruptInEsp32 App::left_encoder_channel_a_interrupt_in_(Hw::kLeftEncoderChannelAGpioPin);
 InterruptInEsp32 App::left_encoder_channel_b_interrupt_in_(Hw::kLeftEncoderChannelBGpioPin);
+#elif defined(ARDUINO_ARCH_RP2040)
+InterruptInRp2040 App::left_encoder_channel_a_interrupt_in_(Hw::kLeftEncoderChannelAGpioPin);
+InterruptInRp2040 App::left_encoder_channel_b_interrupt_in_(Hw::kLeftEncoderChannelBGpioPin);
 #else
 InterruptInArduino App::left_encoder_channel_a_interrupt_in_(Hw::kLeftEncoderChannelAGpioPin);
 InterruptInArduino App::left_encoder_channel_b_interrupt_in_(Hw::kLeftEncoderChannelBGpioPin);
@@ -133,6 +145,9 @@ Encoder App::left_encoder_(&left_encoder_channel_a_interrupt_in_,
 #if defined(ARDUINO_ARCH_ESP32)
 InterruptInEsp32 App::right_encoder_channel_a_interrupt_in_(Hw::kRightEncoderChannelAGpioPin);
 InterruptInEsp32 App::right_encoder_channel_b_interrupt_in_(Hw::kRightEncoderChannelBGpioPin);
+#elif defined(ARDUINO_ARCH_RP2040)
+InterruptInRp2040 App::right_encoder_channel_a_interrupt_in_(Hw::kRightEncoderChannelAGpioPin);
+InterruptInRp2040 App::right_encoder_channel_b_interrupt_in_(Hw::kRightEncoderChannelBGpioPin);
 #else
 InterruptInArduino App::right_encoder_channel_a_interrupt_in_(Hw::kRightEncoderChannelAGpioPin);
 InterruptInArduino App::right_encoder_channel_b_interrupt_in_(Hw::kRightEncoderChannelBGpioPin);
@@ -154,10 +169,13 @@ bool App::is_imu_connected{false};
 Adafruit_BNO055 App::bno055_imu_{/*sensorID=*/55, BNO055_ADDRESS_A, &Wire};
 
 void App::setup() {
-  // Required by Arduino libraries to work.
+  // Required by Arduino libraries to work on some cores (e.g. AVR, ESP32).
+#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_ESP32)
   init();
+#endif
 
   serial_stream_.begin(Constants::kBaudrate);
+  delay(5000);
 
   left_encoder_.begin();
   right_encoder_.begin();
@@ -188,9 +206,22 @@ void App::setup() {
     bno055_imu_.setExtCrystalUse(true);
     is_imu_connected = true;
   }
+
+// #if defined(LED_BUILTIN)
+//   // Turn on a status LED so we know the firmware is running.
+//   // Using LED_BUILTIN lets the core route this correctly
+//   // (e.g. via CYW43 on Pico W / Pico 2 W).
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(100);
+  digitalWrite(LED_BUILTIN, HIGH);
+// #endif
 }
 
 void App::loop() {
+
+  Serial.println("Blink");
+
   // Process command prompt input.
   shell_.process_input();
 

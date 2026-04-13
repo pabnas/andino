@@ -64,6 +64,36 @@ struct Hw {
   static constexpr int kImuI2cSclPin{22};
   /// @brief IMU sensor I2C SDA pin (default ESP32 SDA).
   static constexpr int kImuI2cSdaPin{21};
+#elif defined(ARDUINO_ARCH_RP2040)
+  /// @brief Left encoder channel A pin.
+  /// @note These RP2040 pins are example values; adjust to match your wiring.
+  static constexpr int kLeftEncoderChannelAGpioPin{2};
+  /// @brief Left encoder channel B pin.
+  static constexpr int kLeftEncoderChannelBGpioPin{3};
+
+  /// @brief Right encoder channel A pin.
+  static constexpr int kRightEncoderChannelAGpioPin{4};
+  /// @brief Right encoder channel B pin.
+  static constexpr int kRightEncoderChannelBGpioPin{5};
+
+  /// @brief Left motor driver backward pin (L298N IN1).
+  static constexpr int kLeftMotorBackwardGpioPin{6};
+  /// @brief Left motor driver forward pin (L298N IN2).
+  static constexpr int kLeftMotorForwardGpioPin{7};
+  /// @brief Left motor driver enable pin (L298N ENA).
+  static constexpr int kLeftMotorEnableGpioPin{8};
+
+  /// @brief Right motor driver backward pin (L298N IN3).
+  static constexpr int kRightMotorBackwardGpioPin{9};
+  /// @brief Right motor driver forward pin (L298N IN4).
+  static constexpr int kRightMotorForwardGpioPin{10};
+  /// @brief Right motor driver enable pin (L298N ENB).
+  static constexpr int kRightMotorEnableGpioPin{11};
+
+  /// @brief IMU sensor I2C SCL pin (default Pico I2C0 SCL).
+  static constexpr int kImuI2cSclPin{5};
+  /// @brief IMU sensor I2C SDA pin (default Pico I2C0 SDA).
+  static constexpr int kImuI2cSdaPin{4};
 #else
   /// @brief Left encoder channel A pin. Connected to PD2 (digital pin 2).
   static constexpr int kLeftEncoderChannelAGpioPin{2};

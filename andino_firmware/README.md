@@ -77,3 +77,28 @@ A serial port connection must be created at 57600 bauds. You can use the serial 
 | `u` | Set PID values | kp kd ki offset | `u 1.0 0.1 0.01 0` |  |
 | `h` | Get if IMU is connected |  | `h` | `0` if not connected, `1` if connected |
 | `i` | Get IMU data and encoder tick values |  | `i` | `<left> <right>  <orientation_X> <orientation_Y> <orientation_Z> <orientation_W> <angular_velocity_X> <angular_velocity_Y> <angular_velocity_Z> <linear_acceleration_X> <linear_acceleration_Y> <linear_acceleration_Z>` |
+
+The Fix: Add Pico-Specific udev Rules
+You can add the correct permissions in just a few copy-paste terminal commands.
+
+1. Create the udev rules file specifically for the Pico's vendor ID (2e8a):
+Run these two commands in your terminal to create the file and append the necessary permissions for both standard mode and BOOTSEL mode:
+
+Bash
+
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", MODE="0666"' | sudo tee /etc/udev/rules.d/99-pico.rules
+Bash
+
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", MODE="0666"' | sudo tee -a /etc/udev/rules.d/99-pico.rules
+2. Reload the udev rules so Linux applies them:
+Run these two commands to refresh your system's USB rules without needing a reboot:
+
+Bash
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+3. Unplug and replug the Pico
+Physically disconnect the USB cable from the Pico and plug it back in so Linux recognizes it under the newly created rules.
+
+Now, run your upload command again:
+pio run --target upload -e pico
