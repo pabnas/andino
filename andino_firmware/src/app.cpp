@@ -151,6 +151,8 @@ unsigned long App::last_set_motors_speed_cmd_{0};
 
 bool App::is_imu_connected{false};
 
+long global_setpoint_{0};
+
 Adafruit_BNO055 App::bno055_imu_{/*sensorID=*/55, BNO055_ADDRESS_B, &Wire};
 
 void App::setup() {
@@ -217,6 +219,14 @@ void App::adjust_motors_speed() {
   int right_motor_speed = 0;
   left_pid_controller_.compute(left_encoder_.read(), left_motor_speed);
   right_pid_controller_.compute(right_encoder_.read(), right_motor_speed);
+
+  // Serial.print("Setpoint:");
+  // Serial.print(global_setpoint_);
+  // Serial.print(" Output_left: ");
+  // Serial.print(left_motor_speed);
+  // Serial.print(" Output_right: ");
+  // Serial.println(right_motor_speed);
+
   if (left_pid_controller_.enabled()) {
     left_motor_.set_speed(left_motor_speed);
   }
@@ -290,6 +300,7 @@ void App::cmd_set_motors_speed_cb(int argc, char** argv) {
 
   // The target speeds are in ticks per second, so we need to convert them to ticks per
   // Constants::kPidRate.
+  global_setpoint_ = left_motor_speed / Constants::kPidRate;
   left_pid_controller_.set_setpoint(left_motor_speed / Constants::kPidRate);
   right_pid_controller_.set_setpoint(right_motor_speed / Constants::kPidRate);
   Serial.println("OK");
@@ -312,11 +323,11 @@ void App::cmd_set_motors_pwm_cb(int argc, char** argv) {
   // Reset the auto stop timer.
   last_set_motors_speed_cmd_ = millis();
 
-  Serial.println("Setting motors PWM: ");
-  Serial.print("Right: ");
-  Serial.println(right_motor_pwm);
-  Serial.print("Left: ");
-  Serial.println(left_motor_pwm);
+  // Serial.println("Setting motors PWM: ");
+  // Serial.print("Right: ");
+  // Serial.println(right_motor_pwm);
+  // Serial.print("Left: ");
+  // Serial.println(left_motor_pwm);
 
   left_motor_.set_speed(left_motor_pwm);
   right_motor_.set_speed(right_motor_pwm);
@@ -324,34 +335,57 @@ void App::cmd_set_motors_pwm_cb(int argc, char** argv) {
 }
 
 void App::cmd_set_pid_tuning_gains_cb(int argc, char** argv) {
-  // TODO(jballoffet): Refactor to expect command multiple arguments.
   if (argc < 2) {
     return;
   }
 
-  static constexpr int kSizePidArgs{4};
-  int i = 0;
-  char arg[20];
-  char* str;
-  int pid_args[kSizePidArgs]{0, 0, 0, 0};
+  int kp = 0;
+  int kd = 0;
+  int ki = 0;
+  int ko = 0;
 
-  // Example: "u 30:20:10:50".
-  strcpy(arg, argv[1]);
-  char* p = arg;
-  while ((str = strtok_r(p, ":", &p)) != NULL && i < kSizePidArgs) {
-    pid_args[i] = atoi(str);
-    i++;
+  if (argc >= 5) {
+    // Space-separated format: "u 30 10 0 10".
+    kp = atoi(argv[1]);
+    kd = atoi(argv[2]);
+    ki = atoi(argv[3]);
+    ko = atoi(argv[4]);
+  } else {
+    // Backwards-compatible colon-separated format in a single argument: "u 30:10:0:10".
+    static constexpr int kSizePidArgs{4};
+    int pid_args[kSizePidArgs]{0, 0, 0, 0};
+    int i = 0;
+    char arg[32];
+    char* str;
+
+    strncpy(arg, argv[1], sizeof(arg));
+    arg[sizeof(arg) - 1] = '\0';
+    char* p = arg;
+    while ((str = strtok_r(p, ":", &p)) != NULL && i < kSizePidArgs) {
+      pid_args[i] = atoi(str);
+      i++;
+    }
+    kp = pid_args[0];
+    kd = pid_args[1];
+    ki = pid_args[2];
+    ko = pid_args[3];
   }
-  left_pid_controller_.set_tunings(pid_args[0], pid_args[1], pid_args[2], pid_args[3]);
-  right_pid_controller_.set_tunings(pid_args[0], pid_args[1], pid_args[2], pid_args[3]);
+
+  // Prevent invalid configuration that would cause divide-by-zero inside the PID.
+  if (ko == 0) {
+    ko = 1;
+  }
+
+  left_pid_controller_.set_tunings(kp, kd, ki, ko);
+  right_pid_controller_.set_tunings(kp, kd, ki, ko);
   Serial.print("PID Updated: ");
-  Serial.print(pid_args[0]);
+  Serial.print(kp);
   Serial.print(" ");
-  Serial.print(pid_args[1]);
+  Serial.print(kd);
   Serial.print(" ");
-  Serial.print(pid_args[2]);
+  Serial.print(ki);
   Serial.print(" ");
-  Serial.println(pid_args[3]);
+  Serial.println(ko);
   Serial.println("OK");
 }
 
