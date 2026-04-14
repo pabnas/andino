@@ -151,7 +151,7 @@ unsigned long App::last_set_motors_speed_cmd_{0};
 
 bool App::is_imu_connected{false};
 
-Adafruit_BNO055 App::bno055_imu_{/*sensorID=*/55, BNO055_ADDRESS_A, &Wire};
+Adafruit_BNO055 App::bno055_imu_{/*sensorID=*/55, BNO055_ADDRESS_B, &Wire};
 
 void App::setup() {
   // Required by Arduino libraries to work.
@@ -396,6 +396,7 @@ void App::cmd_read_encoders_and_imu_cb(int, char**) {
   Serial.print(linear_acceleration.y());
   Serial.print(" ");
   Serial.print(linear_acceleration.z());
+  Serial.println();
 }
 
 }  // namespace andino
